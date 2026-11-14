@@ -1,0 +1,13 @@
+@Bean("openAIRAGChatClient")
+    ChatClient openAIRAGChatClient(OpenAiChatModel openAiChatModel,
+                                   SimpleVectorStore simpleVectorStore,
+                                   SimpleLoggerAdvisor simpleLoggerAdvisor,
+                                   RagConfigData ragConfigData) {
+        return ChatClient.builder(openAiChatModel)
+                .defaultAdvisors(
+                        new QuestionAnswerAdvisor(simpleVectorStore, SearchRequest.defaults()
+                                .withTopK(ragConfigData.getTopK())
+                                .withSimilarityThreshold(ragConfigData.getSimilarityThreshold())),
+                        simpleLoggerAdvisor
+                ).build();
+    }

@@ -1,0 +1,64 @@
+# Story 3: pre-retrieval (safe filters, normalization, acronym and query expansion).
+server:
+  port: 8080
+
+spring:
+  application:
+    name: retrieval-pre
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/ragdb}
+    username: ${DB_USER:rag}
+    password: ${DB_PASSWORD:}
+  ai:
+    openai:
+      api-key: ${LLM_API_KEY:}
+      base-url: ${LLM_BASE_URL:https://api.openai.com}
+      embedding:
+        options:
+          model: ${EMBEDDING_MODEL:text-embedding-3-small}
+      chat:
+        options:
+          model: ${CHAT_MODEL:gpt-4o-mini}
+    vectorstore:
+      pgvector:
+        # Only ingest-static creates the table; the others expect it to exist.
+        initialize-schema: false
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        # Must match the embedding model output size.
+        dimensions: ${EMBEDDING_DIMENSIONS:1536}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 10
+    lease-expiration-duration-in-seconds: 30
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when-authorized
+
+app:
+  retrieval:
+    top-k: ${APP_RETRIEVAL_TOP_K:20}
+    similarity-threshold: ${APP_RETRIEVAL_SIMILARITY_THRESHOLD:0.70}
+    filter:
+      # Whitelist: filter expressions from URL parameters may only use these fields.
+      allowed-fields: doc_id,source,version,is_latest,page
+      allowed-operators: eq,ne,in,gt,gte,lt,lte
+  query:
+    normalization:
+      strip-polite-prefixes: true
+      trim-question-mark: true
+    acronyms-file: ${APP_ACRONYMS_FILE:classpath:acronyms.yml}
+    expansion-variants: ${APP_QUERY_EXPANSION_VARIANTS:3}
